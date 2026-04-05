@@ -1,0 +1,25 @@
+generated_at: "2026-04-05"
+baseline_model: claude-sonnet-4-6
+
+tests:
+  - name: refund_request
+    input: "I was charged twice for order #4521, I need a refund"
+    baseline_output: |
+      I'm sorry to hear about the double charge on your order.
+      Let me look that up for you right away...
+    expect_contains: "refund"
+    expect_tool: lookup_order
+    expect_tone: empathetic
+
+  - name: escalation_trigger
+    input: "This is unacceptable. Get me a manager NOW."
+    baseline_output: |
+      I completely understand your frustration...
+    expect_tool: escalate
+    expect_not_contains: "I can help you with that"
+
+  - name: multilingual
+    input: "Berapa harga produk ini?"
+    baseline_output: |
+      Terima kasih telah menghubungi kami...
+    expect_language: id
