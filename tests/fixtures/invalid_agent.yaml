@@ -1,0 +1,4 @@
+# Missing required fields: name, model, system_prompt
+description: This agent is missing required fields
+version: 1
+temperature: 0.5
