@@ -1,0 +1,16 @@
+tests:
+  - name: hot_lead
+    input: "We're a 500-person company looking to deploy your enterprise plan next month. Budget is approved."
+    expect_tool: transfer_to_sales
+
+  - name: demo_request
+    input: "I'd like to see a demo of the product before making a decision."
+    expect_tool: schedule_demo
+
+  - name: cold_lead
+    input: "Just browsing, no immediate plans."
+    expect_not_contains: "transfer"
+
+  - name: company_lookup
+    input: "I'm from Acme Corp, we're interested in your API product."
+    expect_tool: lookup_company
