@@ -1,0 +1,216 @@
+"""Auto-generate eval tests from agent definitions."""
+
+from __future__ import annotations
+
+import re
+from datetime import date
+from pathlib import Path
+
+import yaml
+
+from agentmodelctl.models import (
+    AgentConfig,
+    EvalFile,
+    EvalTest,
+    ModelsConfig,
+    ProjectConfig,
+)
+from agentmodelctl.providers.adapter import call_model
+from agentmodelctl.router import get_api_key, get_litellm_model_string, resolve_alias
+
+
+META_PROMPT = """\
+You are an AI testing expert. Given an agent definition, generate realistic eval test cases.
+
+Agent name: {name}
+Description: {description}
+System prompt:
+{system_prompt}
+
+Tools available: {tools}
+Temperature: {temperature}
+
+Generate {count} diverse test cases as YAML. Each test should exercise different capabilities.
+Include a mix of: happy path, edge cases, tool usage, tone requirements, and multilingual if relevant.
+
+Output ONLY valid YAML (no markdown fences, no explanations) in this exact format:
+tests:
+  - name: short_snake_case_name
+    input: "realistic user message"
+    expect_contains: "expected substring"
+    expect_tool: tool_name
+    expect_tone: tone_word
+"""
+
+
+def auto_generate_evals(
+    agent: AgentConfig,
+    models: ModelsConfig,
+    config: ProjectConfig,
+    count: int | None = None,
+) -> EvalFile:
+    """Generate eval tests for an agent using an LLM meta-prompt.
+
+    Uses the agent's own model to generate test inputs, then captures
+    baseline outputs by running each input through the agent.
+
+    Args:
+        agent: The agent to generate evals for.
+        models: Model alias configuration.
+        config: Project configuration.
+        count: Number of tests to generate (defaults to config.defaults.auto_generate_count).
+
+    Returns:
+        EvalFile with generated tests and captured baselines.
+    """
+    count = count or config.defaults.auto_generate_count
+
+    # Resolve the agent's model
+    provider, model = resolve_alias(agent.model, models)
+    model_string = get_litellm_model_string(provider, model)
+    api_key = get_api_key(provider, config)
+
+    # Format tools as readable list
+    tools_str = "\n".join(
+        f"  - {t.name}: {t.description}" for t in agent.tools
+    ) if agent.tools else "  (none)"
+
+    # Generate test inputs via LLM
+    prompt = META_PROMPT.format(
+        name=agent.name,
+        description=agent.description,
+        system_prompt=agent.system_prompt,
+        tools=tools_str,
+        temperature=agent.temperature,
+        count=count,
+    )
+
+    response = call_model(
+        model=model_string,
+        system_prompt="You are a test case generator. Output only valid YAML.",
+        user_message=prompt,
+        temperature=0.7,
+        max_tokens=4096,
+        api_key=api_key,
+    )
+
+    # Parse YAML from response
+    tests = _parse_tests_from_response(response.content)
+
+    # Capture baseline outputs
+    tests = capture_baselines(
+        agent=agent,
+        tests=tests,
+        model_string=model_string,
+        api_key=api_key,
+    )
+
+    return EvalFile(
+        generated_at=date.today().isoformat(),
+        baseline_model=model,
+        tests=tests,
+    )
+
+
+def capture_baselines(
+    agent: AgentConfig,
+    tests: list[EvalTest],
+    model_string: str,
+    api_key: str,
+) -> list[EvalTest]:
+    """Run each test input through the agent and capture baseline outputs.
+
+    Args:
+        agent: The agent configuration.
+        tests: List of test cases (baseline_output will be filled in).
+        model_string: Resolved LiteLLM model string.
+        api_key: API key for the provider.
+
+    Returns:
+        Updated list of tests with baseline_output populated.
+    """
+    tools = [{"name": t.name, "description": t.description} for t in agent.tools] or None
+
+    updated: list[EvalTest] = []
+    for test in tests:
+        response = call_model(
+            model=model_string,
+            system_prompt=agent.system_prompt,
+            user_message=test.input,
+            temperature=agent.temperature,
+            max_tokens=agent.max_tokens,
+            api_key=api_key,
+            tools=tools,
+        )
+        # Create updated test with baseline
+        updated.append(test.model_copy(update={"baseline_output": response.content}))
+
+    return updated
+
+
+def save_eval_file(
+    eval_file: EvalFile,
+    agent_name: str,
+    project_root: Path,
+) -> Path:
+    """Save a generated eval file to disk.
+
+    Writes to evals/{agent_name}/auto_generated.yaml.
+
+    Returns:
+        Path to the saved file.
+    """
+    eval_dir = project_root / "evals" / agent_name
+    eval_dir.mkdir(parents=True, exist_ok=True)
+
+    file_path = eval_dir / "auto_generated.yaml"
+
+    # Serialize, excluding None values for cleaner YAML
+    data = eval_file.model_dump(exclude_none=True)
+    yaml_content = yaml.dump(data, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+    # Add header comment
+    header = "# AUTO-GENERATED by agentmodelctl — review and adjust\n"
+    file_path.write_text(header + yaml_content)
+
+    return file_path
+
+
+def _parse_tests_from_response(content: str) -> list[EvalTest]:
+    """Parse eval tests from an LLM response.
+
+    Handles markdown fences and various YAML formatting issues.
+    """
+    # Strip markdown code fences if present
+    cleaned = re.sub(r"```(?:yaml|yml)?\s*\n?", "", content)
+    cleaned = re.sub(r"```\s*$", "", cleaned, flags=re.MULTILINE)
+    cleaned = cleaned.strip()
+
+    try:
+        data = yaml.safe_load(cleaned)
+    except yaml.YAMLError:
+        return []
+
+    if not isinstance(data, dict) or "tests" not in data:
+        # Try treating the whole thing as a list
+        if isinstance(data, list):
+            raw_tests = data
+        else:
+            return []
+    else:
+        raw_tests = data["tests"]
+
+    if not isinstance(raw_tests, list):
+        return []
+
+    tests: list[EvalTest] = []
+    for item in raw_tests:
+        if not isinstance(item, dict) or "input" not in item:
+            continue
+        try:
+            test = EvalTest(**item)
+            tests.append(test)
+        except Exception:
+            continue
+
+    return tests
