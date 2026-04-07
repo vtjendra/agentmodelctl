@@ -25,8 +25,7 @@ def resolve_alias(alias: str, models: ModelsConfig) -> tuple[str, str]:
     if alias not in models.aliases:
         available = ", ".join(sorted(models.aliases.keys()))
         raise KeyError(
-            f"Model alias '{alias}' is not defined in models.yaml. "
-            f"Available aliases: {available}"
+            f"Model alias '{alias}' is not defined in models.yaml. Available aliases: {available}"
         )
     entry = models.aliases[alias]
     return entry.provider, entry.model
@@ -53,9 +52,7 @@ def get_api_key(provider: str, config: ProjectConfig) -> str:
     key = os.environ.get(env_var, "")
     if not key:
         raise ValueError(
-            f"{env_var} not set. "
-            f"Set it in your environment or in .env file. "
-            f"See: .env.example"
+            f"{env_var} not set. Set it in your environment or in .env file. See: .env.example"
         )
     return key
 

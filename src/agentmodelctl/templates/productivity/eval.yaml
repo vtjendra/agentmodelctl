@@ -1,0 +1,13 @@
+tests:
+  - name: basic_summary
+    input: "Summarize: The quarterly revenue report shows a 15% increase in Q3 compared to Q2, driven primarily by the new enterprise tier. Customer churn decreased to 2.1%. The team recommends investing in the enterprise sales pipeline."
+    expect_contains: ["15%", "enterprise"]
+    expect_max_tokens: 200
+
+  - name: action_items
+    input: "Extract action items: We need to update the documentation by Friday, schedule a meeting with the design team next week, and fix the login bug before the release."
+    expect_contains: ["documentation", "meeting", "bug"]
+
+  - name: short_text
+    input: "Summarize: Meeting cancelled."
+    expect_max_tokens: 50

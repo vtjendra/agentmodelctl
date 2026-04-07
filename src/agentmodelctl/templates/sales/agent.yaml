@@ -1,0 +1,26 @@
+name: lead-qualifier
+description: Qualifies inbound leads and routes to appropriate sales reps
+version: 1
+model: fast
+
+system_prompt: |
+  You are a lead qualification agent.
+  Ask clarifying questions to determine the prospect's needs, budget, and timeline.
+  Classify leads as hot, warm, or cold based on their responses.
+  For hot leads, transfer to a sales representative immediately.
+
+tools:
+  - name: lookup_company
+    description: Look up company information by name or domain
+  - name: transfer_to_sales
+    description: Transfer the conversation to a sales representative
+  - name: schedule_demo
+    description: Schedule a product demo for the prospect
+
+temperature: 0.5
+max_tokens: 1024
+
+metadata:
+  owner: sales-team
+  env: production
+  tags: [customer-facing, sales, lead-gen]

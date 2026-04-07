@@ -1,0 +1,20 @@
+name: summarizer
+description: Summarizes documents and extracts key information
+version: 1
+model: fast
+
+system_prompt: |
+  You are a document summarizer.
+  Given a document or text, provide a concise summary.
+  Extract key points, action items, and important dates.
+  Keep summaries under 200 words unless asked otherwise.
+
+tools: []
+
+temperature: 0.3
+max_tokens: 512
+
+metadata:
+  owner: productivity-team
+  env: production
+  tags: [internal, summarization]

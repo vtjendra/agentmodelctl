@@ -1,0 +1,17 @@
+tests:
+  - name: greeting
+    input: "Hi, I need help with my order"
+    expect_contains: "help"
+    expect_tone: professional
+
+  - name: order_lookup
+    input: "Can you check the status of order #12345?"
+    expect_tool: lookup_order
+
+  - name: escalation
+    input: "I need to dispute a charge on my account"
+    expect_tool: escalate
+
+  - name: product_inquiry
+    input: "Do you have the blue widget in stock?"
+    expect_tool: check_inventory

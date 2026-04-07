@@ -26,14 +26,16 @@ def _build_tools(tools: list[dict] | None) -> list[dict] | None:
         return None
     result = []
     for tool in tools:
-        result.append({
-            "type": "function",
-            "function": {
-                "name": tool["name"],
-                "description": tool.get("description", ""),
-                "parameters": tool.get("parameters", {"type": "object", "properties": {}}),
-            },
-        })
+        result.append(
+            {
+                "type": "function",
+                "function": {
+                    "name": tool["name"],
+                    "description": tool.get("description", ""),
+                    "parameters": tool.get("parameters", {"type": "object", "properties": {}}),
+                },
+            }
+        )
     return result
 
 
@@ -91,10 +93,12 @@ def call_model(
     extracted_tool_calls: list[dict] = []
     if hasattr(message, "tool_calls") and message.tool_calls:
         for tc in message.tool_calls:
-            extracted_tool_calls.append({
-                "name": tc.function.name,
-                "arguments": tc.function.arguments,
-            })
+            extracted_tool_calls.append(
+                {
+                    "name": tc.function.name,
+                    "arguments": tc.function.arguments,
+                }
+            )
             # Append tool call info to content for scoring visibility
             content += f"\n[Tool call: {tc.function.name}({tc.function.arguments})]"
 

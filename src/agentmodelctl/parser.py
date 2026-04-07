@@ -50,9 +50,7 @@ def load_models(root: Path) -> ModelsConfig:
     """Load and validate models.yaml."""
     models_path = root / "models.yaml"
     if not models_path.exists():
-        raise FileNotFoundError(
-            "models.yaml not found. Create it or run 'agentmodelctl init'."
-        )
+        raise FileNotFoundError("models.yaml not found. Create it or run 'agentmodelctl init'.")
     with open(models_path) as f:
         data = yaml.safe_load(f) or {}
     try:

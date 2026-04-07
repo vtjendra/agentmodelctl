@@ -1,0 +1,13 @@
+version: 1
+project: my-agents
+
+defaults:
+  eval_runs: 3
+  similarity_threshold: 0.80
+  auto_generate_count: 10
+
+providers:
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+  openai:
+    api_key_env: OPENAI_API_KEY

@@ -74,6 +74,9 @@ class TestRedactKey:
         assert redact_key(text) == text
 
     def test_multiple_keys(self):
-        text = "a: sk-ant-abcdefghijklmnopqrstuvwxyz1234567890 b: sk-abcdefghijklmnopqrstuvwxyz1234567890"
+        text = (
+            "a: sk-ant-abcdefghijklmnopqrstuvwxyz1234567890"
+            " b: sk-abcdefghijklmnopqrstuvwxyz1234567890"
+        )
         redacted = redact_key(text)
         assert redacted.count("...") >= 2

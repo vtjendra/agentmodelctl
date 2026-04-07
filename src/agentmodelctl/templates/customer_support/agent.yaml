@@ -1,0 +1,26 @@
+name: customer-support
+description: Handles tier-1 customer inquiries via chat
+version: 1
+model: reasoning
+
+system_prompt: |
+  You are a customer support agent for our company.
+  Always greet the customer politely.
+  If the issue requires billing access, escalate to a human.
+  Respond in the customer's language.
+
+tools:
+  - name: lookup_order
+    description: Look up order by ID
+  - name: check_inventory
+    description: Check product availability
+  - name: escalate
+    description: Transfer to human agent
+
+temperature: 0.3
+max_tokens: 1024
+
+metadata:
+  owner: support-team
+  env: production
+  tags: [customer-facing, tier-1]
