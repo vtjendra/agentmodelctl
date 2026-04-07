@@ -128,6 +128,16 @@ class AgentEvalSummary(BaseModel):
     results: list[EvalResult]
 
 
+class ChangeSet(BaseModel):
+    """Categorized file changes for CI decision-making."""
+
+    config_changed: bool = False
+    models_changed: bool = False
+    agents_changed: list[str] = []
+    evals_changed: list[str] = []
+    all_affected_agents: list[str] = []
+
+
 class ProviderConfig(BaseModel):
     """Provider-specific configuration."""
 
