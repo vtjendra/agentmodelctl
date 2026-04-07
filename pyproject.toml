@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentmodelctl"
-version = "0.1.0"
+version = "0.2.0"
 description = "Fleet management for AI agents — know what breaks before you switch models"
 readme = "README.md"
 license = "MIT"

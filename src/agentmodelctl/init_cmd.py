@@ -65,12 +65,21 @@ def run_init(template: str = "custom") -> None:
                 eval_agent_dir.mkdir(exist_ok=True)
                 _copy_template(eval_src, eval_agent_dir / "basics.yaml")
 
+    # Copy GitHub Actions workflow
+    gh_actions_dir = project_root / ".github" / "workflows"
+    gh_actions_dir.mkdir(parents=True, exist_ok=True)
+    _copy_template(
+        TEMPLATES_DIR / "github_actions.yaml",
+        gh_actions_dir / "agent-eval.yaml",
+    )
+
     # Print success
     console.print(f"\n[green]✓[/green] Created agentmodelctl project ({template} template):\n")
     console.print("  ├── agentmodelctl.yaml")
     console.print("  ├── models.yaml")
     console.print("  ├── .env.example        ← copy to .env and add your API keys")
     console.print("  ├── .gitignore           ← .env already excluded")
+    console.print("  ├── .github/workflows/   ← CI evals on PRs")
     console.print("  └── agents/")
     if template_dir_name:
         console.print(f"      └── {template}.yaml")
@@ -79,6 +88,7 @@ def run_init(template: str = "custom") -> None:
     console.print("  1. cp .env.example .env && edit .env")
     console.print("  2. agentmodelctl eval --auto-generate")
     console.print("  3. agentmodelctl switch reasoning gpt-4o --dry-run")
+    console.print("  4. git push — CI will run evals on PRs that touch agent configs")
 
 
 def _copy_template(src: Path, dest: Path) -> None:
@@ -95,7 +105,7 @@ def _ensure_gitignore(project_root: Path) -> None:
     gitignore_path = project_root / ".gitignore"
     gitignore_template = TEMPLATES_DIR / "gitignore"
 
-    required_entries = {".env", ".env.local", ".env.*.local", "__pycache__/"}
+    required_entries = {".env", ".env.local", ".env.*.local", "__pycache__/", ".agentmodelctl/"}
 
     if gitignore_path.exists():
         existing = gitignore_path.read_text()

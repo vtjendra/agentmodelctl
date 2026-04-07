@@ -74,11 +74,21 @@ def eval_cmd(
     auto_generate: bool = typer.Option(
         False, "--auto-generate", help="Generate evals from agent definition"
     ),
+    output_format: str = typer.Option(
+        "rich", "--format", "-f", help="Output: rich, json, markdown"
+    ),
+    cache: bool = typer.Option(False, "--cache/--no-cache", help="Use eval caching"),
 ) -> None:
     """Run evaluations for agents (quality + speed + cost)."""
     from agentmodelctl.eval_cmd import run_eval
 
-    run_eval(agent_name=agent_name, all_agents=all_agents, auto_generate=auto_generate)
+    run_eval(
+        agent_name=agent_name,
+        all_agents=all_agents,
+        auto_generate=auto_generate,
+        output_format=output_format,
+        use_cache=cache,
+    )
 
 
 @app.command()
@@ -111,3 +121,29 @@ def report() -> None:
     from agentmodelctl.report_cmd import run_report
 
     run_report()
+
+
+@app.command()
+def ci(
+    ref: str = typer.Option("HEAD", help="Git ref to diff against"),
+    output_format: str = typer.Option(
+        "markdown", "--format", "-f", help="Output: rich, json, markdown"
+    ),
+    cache: bool = typer.Option(True, "--cache/--no-cache", help="Use eval caching"),
+    fail_on_regression: bool = typer.Option(
+        True,
+        "--fail-on-regression/--no-fail-on-regression",
+        help="Exit 1 if any eval fails",
+    ),
+    all_agents: bool = typer.Option(False, "--all", help="Run all agents"),
+) -> None:
+    """Run CI-optimized evals — change detection, caching, structured output."""
+    from agentmodelctl.ci_cmd import run_ci
+
+    run_ci(
+        ref=ref,
+        output_format=output_format,
+        use_cache=cache,
+        fail_on_regression=fail_on_regression,
+        all_agents=all_agents,
+    )

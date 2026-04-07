@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from agentmodelctl.models import (
     AgentConfig,
     EvalFile,
@@ -79,6 +81,8 @@ def run_agent_evals(
     config: ProjectConfig,
     model_override: str | None = None,
     api_key_override: str | None = None,
+    use_cache: bool = False,
+    project_root: Path | None = None,
 ) -> list[EvalResult]:
     """Run all eval tests for an agent.
 
@@ -89,10 +93,29 @@ def run_agent_evals(
         config: Project configuration.
         model_override: If set, use this model string instead of the agent's alias.
         api_key_override: If set, use this API key instead of resolving from env.
+        use_cache: If True, check/save results in hash-based cache.
+        project_root: Project root for cache directory (required if use_cache=True).
 
     Returns:
         List of EvalResult for each test case.
     """
+    # Check cache before running
+    if use_cache and project_root and not model_override:
+        from agentmodelctl.cache import (
+            compute_eval_fingerprint,
+            get_cache_dir,
+            load_cached_results,
+            save_cached_results,
+        )
+
+        model_alias = models.aliases.get(agent.model)
+        if model_alias:
+            fingerprint = compute_eval_fingerprint(agent, eval_files, model_alias)
+            cache_dir = get_cache_dir(project_root)
+            cached = load_cached_results(fingerprint, cache_dir)
+            if cached is not None:
+                return cached
+
     # Resolve model
     if model_override:
         model_string = model_override
@@ -125,6 +148,14 @@ def run_agent_evals(
             similarity_threshold=similarity_threshold,
         )
         results.append(result)
+
+    # Save to cache
+    if use_cache and project_root and not model_override:
+        model_alias = models.aliases.get(agent.model)
+        if model_alias:
+            fingerprint = compute_eval_fingerprint(agent, eval_files, model_alias)
+            cache_dir = get_cache_dir(project_root)
+            save_cached_results(fingerprint, results, cache_dir)
 
     return results
 

@@ -5,17 +5,31 @@ from __future__ import annotations
 import typer
 from dotenv import load_dotenv
 
+from agentmodelctl.models import OutputFormat
 from agentmodelctl.parser import load_project
 from agentmodelctl.reporter import console, display_eval_results
+
+
+def _parse_output_format(output_format: str) -> OutputFormat:
+    """Parse and validate output format string."""
+    try:
+        return OutputFormat(output_format)
+    except ValueError:
+        valid = ", ".join(f.value for f in OutputFormat)
+        console.print(f"[red]✗[/red] Invalid format '{output_format}'. Choose from: {valid}")
+        raise typer.Exit(code=1)
 
 
 def run_eval(
     agent_name: str | None = None,
     all_agents: bool = False,
     auto_generate: bool = False,
+    output_format: str = "rich",
+    use_cache: bool = False,
 ) -> None:
     """Run evaluations for agents."""
     load_dotenv()
+    fmt = _parse_output_format(output_format)
 
     try:
         project = load_project()
@@ -45,13 +59,20 @@ def run_eval(
         raise typer.Exit(code=1)
 
     # Run evals
+    from agentmodelctl.formatter import (
+        format_eval_results,
+        format_eval_summary,
+        summarize_agent_results,
+    )
     from agentmodelctl.runner import run_agent_evals
 
+    summaries = []
     for name in agents_with_evals:
         agent = project.agents[name]
         eval_files = project.evals[name]
 
-        console.print(f"\nRunning evals for [bold]{name}[/bold]...")
+        if fmt == OutputFormat.rich:
+            console.print(f"\nRunning evals for [bold]{name}[/bold]...")
 
         try:
             results = run_agent_evals(
@@ -59,11 +80,23 @@ def run_eval(
                 eval_files=eval_files,
                 models=project.models,
                 config=project.config,
+                use_cache=use_cache,
+                project_root=project.project_root,
             )
-            display_eval_results(name, results)
+            formatted = format_eval_results(name, results, fmt)
+            if formatted is None:
+                display_eval_results(name, results)
+            else:
+                summaries.append(summarize_agent_results(name, results))
         except (KeyError, ValueError) as e:
             console.print(f"  [red]✗[/red] {e}")
             continue
+
+    # For structured formats, output all results together
+    if summaries and fmt != OutputFormat.rich:
+        output = format_eval_summary(summaries, fmt)
+        if output:
+            console.print(output, highlight=False)
 
 
 def _run_auto_generate(project, agent_name: str | None) -> None:
