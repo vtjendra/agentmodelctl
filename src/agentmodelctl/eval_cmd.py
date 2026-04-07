@@ -25,6 +25,7 @@ def run_eval(
     all_agents: bool = False,
     auto_generate: bool = False,
     output_format: str = "rich",
+    use_cache: bool = False,
 ) -> None:
     """Run evaluations for agents."""
     load_dotenv()
@@ -79,6 +80,8 @@ def run_eval(
                 eval_files=eval_files,
                 models=project.models,
                 config=project.config,
+                use_cache=use_cache,
+                project_root=project.project_root,
             )
             formatted = format_eval_results(name, results, fmt)
             if formatted is None:

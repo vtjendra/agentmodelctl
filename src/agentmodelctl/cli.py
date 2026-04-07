@@ -77,6 +77,7 @@ def eval_cmd(
     output_format: str = typer.Option(
         "rich", "--format", "-f", help="Output: rich, json, markdown"
     ),
+    cache: bool = typer.Option(False, "--cache/--no-cache", help="Use eval caching"),
 ) -> None:
     """Run evaluations for agents (quality + speed + cost)."""
     from agentmodelctl.eval_cmd import run_eval
@@ -86,6 +87,7 @@ def eval_cmd(
         all_agents=all_agents,
         auto_generate=auto_generate,
         output_format=output_format,
+        use_cache=cache,
     )
 
 

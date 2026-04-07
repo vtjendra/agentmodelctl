@@ -95,7 +95,7 @@ def _ensure_gitignore(project_root: Path) -> None:
     gitignore_path = project_root / ".gitignore"
     gitignore_template = TEMPLATES_DIR / "gitignore"
 
-    required_entries = {".env", ".env.local", ".env.*.local", "__pycache__/"}
+    required_entries = {".env", ".env.local", ".env.*.local", "__pycache__/", ".agentmodelctl/"}
 
     if gitignore_path.exists():
         existing = gitignore_path.read_text()
