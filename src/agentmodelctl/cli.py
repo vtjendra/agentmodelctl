@@ -121,3 +121,29 @@ def report() -> None:
     from agentmodelctl.report_cmd import run_report
 
     run_report()
+
+
+@app.command()
+def ci(
+    ref: str = typer.Option("HEAD", help="Git ref to diff against"),
+    output_format: str = typer.Option(
+        "markdown", "--format", "-f", help="Output: rich, json, markdown"
+    ),
+    cache: bool = typer.Option(True, "--cache/--no-cache", help="Use eval caching"),
+    fail_on_regression: bool = typer.Option(
+        True,
+        "--fail-on-regression/--no-fail-on-regression",
+        help="Exit 1 if any eval fails",
+    ),
+    all_agents: bool = typer.Option(False, "--all", help="Run all agents"),
+) -> None:
+    """Run CI-optimized evals — change detection, caching, structured output."""
+    from agentmodelctl.ci_cmd import run_ci
+
+    run_ci(
+        ref=ref,
+        output_format=output_format,
+        use_cache=cache,
+        fail_on_regression=fail_on_regression,
+        all_agents=all_agents,
+    )
