@@ -74,11 +74,19 @@ def eval_cmd(
     auto_generate: bool = typer.Option(
         False, "--auto-generate", help="Generate evals from agent definition"
     ),
+    output_format: str = typer.Option(
+        "rich", "--format", "-f", help="Output: rich, json, markdown"
+    ),
 ) -> None:
     """Run evaluations for agents (quality + speed + cost)."""
     from agentmodelctl.eval_cmd import run_eval
 
-    run_eval(agent_name=agent_name, all_agents=all_agents, auto_generate=auto_generate)
+    run_eval(
+        agent_name=agent_name,
+        all_agents=all_agents,
+        auto_generate=auto_generate,
+        output_format=output_format,
+    )
 
 
 @app.command()

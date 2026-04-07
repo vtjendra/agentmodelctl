@@ -2,10 +2,19 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, field_validator
+
+
+class OutputFormat(str, Enum):
+    """Output format for command results."""
+
+    rich = "rich"
+    json = "json"
+    markdown = "markdown"
 
 
 class ModelAlias(BaseModel):
@@ -104,6 +113,19 @@ class EvalResult(BaseModel):
     cost_usd: float
     output: str
     failures: list[str] = []
+
+
+class AgentEvalSummary(BaseModel):
+    """Serializable summary of eval results for one agent."""
+
+    agent_name: str
+    passed: int
+    failed: int
+    total: int
+    avg_quality: float
+    avg_latency_seconds: float
+    total_cost_usd: float
+    results: list[EvalResult]
 
 
 class ProviderConfig(BaseModel):
