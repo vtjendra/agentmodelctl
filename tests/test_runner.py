@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -16,7 +16,7 @@ from agentmodelctl.models import (
     ProviderConfig,
 )
 from agentmodelctl.providers.adapter import LLMResponse
-from agentmodelctl.runner import run_single_eval, run_agent_evals, run_all_evals, _infer_provider
+from agentmodelctl.runner import _infer_provider, run_agent_evals, run_single_eval
 
 
 def _mock_llm_response(**kwargs) -> LLMResponse:
@@ -53,9 +53,7 @@ def models() -> ModelsConfig:
 
 @pytest.fixture
 def config() -> ProjectConfig:
-    return ProjectConfig(
-        providers={"anthropic": ProviderConfig(api_key_env="ANTHROPIC_API_KEY")}
-    )
+    return ProjectConfig(providers={"anthropic": ProviderConfig(api_key_env="ANTHROPIC_API_KEY")})
 
 
 class TestRunSingleEval:
@@ -107,10 +105,12 @@ class TestRunAgentEvals:
         mock_call.return_value = _mock_llm_response()
 
         eval_files = [
-            EvalFile(tests=[
-                EvalTest(name="test1", input="Hello"),
-                EvalTest(name="test2", input="World"),
-            ])
+            EvalFile(
+                tests=[
+                    EvalTest(name="test1", input="Hello"),
+                    EvalTest(name="test2", input="World"),
+                ]
+            )
         ]
 
         results = run_agent_evals(agent, eval_files, models, config)

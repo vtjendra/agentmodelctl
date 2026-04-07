@@ -3,26 +3,26 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
+from agentmodelctl.generator import (
+    _parse_tests_from_response,
+    auto_generate_evals,
+    capture_baselines,
+    save_eval_file,
+)
 from agentmodelctl.models import (
     AgentConfig,
+    EvalFile,
+    EvalTest,
     ModelAlias,
     ModelsConfig,
     ProjectConfig,
     ProviderConfig,
 )
 from agentmodelctl.providers.adapter import LLMResponse
-from agentmodelctl.generator import (
-    auto_generate_evals,
-    capture_baselines,
-    save_eval_file,
-    _parse_tests_from_response,
-)
-from agentmodelctl.models import EvalFile, EvalTest
-
 
 VALID_YAML_RESPONSE = """\
 tests:
@@ -63,9 +63,7 @@ def models() -> ModelsConfig:
 
 @pytest.fixture
 def config() -> ProjectConfig:
-    return ProjectConfig(
-        providers={"anthropic": ProviderConfig(api_key_env="ANTHROPIC_API_KEY")}
-    )
+    return ProjectConfig(providers={"anthropic": ProviderConfig(api_key_env="ANTHROPIC_API_KEY")})
 
 
 class TestParseTestsFromResponse:
@@ -123,18 +121,27 @@ class TestAutoGenerateEvals:
         mock_call.side_effect = [
             LLMResponse(
                 content=VALID_YAML_RESPONSE,
-                input_tokens=100, output_tokens=200, cost_usd=0.01,
-                latency_seconds=2.0, tool_calls=[],
+                input_tokens=100,
+                output_tokens=200,
+                cost_usd=0.01,
+                latency_seconds=2.0,
+                tool_calls=[],
             ),
             LLMResponse(
                 content="Baseline 1",
-                input_tokens=10, output_tokens=20, cost_usd=0.001,
-                latency_seconds=0.5, tool_calls=[],
+                input_tokens=10,
+                output_tokens=20,
+                cost_usd=0.001,
+                latency_seconds=0.5,
+                tool_calls=[],
             ),
             LLMResponse(
                 content="Baseline 2",
-                input_tokens=10, output_tokens=20, cost_usd=0.001,
-                latency_seconds=0.5, tool_calls=[],
+                input_tokens=10,
+                output_tokens=20,
+                cost_usd=0.001,
+                latency_seconds=0.5,
+                tool_calls=[],
             ),
         ]
 

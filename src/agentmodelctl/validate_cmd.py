@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import typer
 
-from agentmodelctl.parser import find_project_root, load_agents, load_evals, load_models, load_project_config
+from agentmodelctl.parser import (
+    find_project_root,
+    load_agents,
+    load_evals,
+    load_models,
+    load_project_config,
+)
 from agentmodelctl.reporter import console, display_validation_results
 from agentmodelctl.security import scan_project_for_keys
 
@@ -27,7 +33,7 @@ def run_validate() -> None:
     # Load project config
     try:
         config = load_project_config(root)
-        successes.append(f"agentmodelctl.yaml — valid")
+        successes.append("agentmodelctl.yaml — valid")
     except (FileNotFoundError, ValueError) as e:
         errors.append(f"agentmodelctl.yaml — {e}")
         display_validation_results(errors, warnings, successes)
@@ -97,7 +103,9 @@ def run_validate() -> None:
     env_file = root / ".env"
     if env_file.exists():
         import os
+
         from dotenv import load_dotenv
+
         load_dotenv(env_file)
         for provider_name, provider_config in config.providers.items():
             if provider_config.api_key_env:

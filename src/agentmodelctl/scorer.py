@@ -87,6 +87,7 @@ def score_language(output: str, expected_lang: str) -> tuple[float, list[str]]:
     """
     try:
         import langdetect
+
         detected = langdetect.detect(output)
         if detected == expected_lang:
             return 1.0, []
@@ -99,9 +100,7 @@ def score_language(output: str, expected_lang: str) -> tuple[float, list[str]]:
         return 1.0, []
 
 
-def score_similarity(
-    output: str, golden: str, threshold: float = 0.80
-) -> tuple[float, list[str]]:
+def score_similarity(output: str, golden: str, threshold: float = 0.80) -> tuple[float, list[str]]:
     """Compute text similarity between output and golden reference.
 
     Uses difflib.SequenceMatcher for MVP. Returns (ratio, failures).
@@ -150,7 +149,8 @@ def score_tone(
         elif result.startswith("NO"):
             parts = result.split()
             confidence = float(parts[1]) if len(parts) > 1 else 0.2
-            return 1.0 - confidence, [f"Tone '{expected_tone}' not detected (confidence {confidence:.2f})"]
+            msg = f"Tone '{expected_tone}' not detected (confidence {confidence:.2f})"
+            return 1.0 - confidence, [msg]
         else:
             return 0.5, []  # Ambiguous response, neutral score
     except Exception:
@@ -215,7 +215,9 @@ def score_eval_test(
         all_failures.extend(failures)
 
     if test.expect_tone and tone_model:
-        score, failures = score_tone(output, test.expect_tone, model=tone_model, api_key=tone_api_key)
+        score, failures = score_tone(
+            output, test.expect_tone, model=tone_model, api_key=tone_api_key
+        )
         scores.append(score)
         all_failures.extend(failures)
 

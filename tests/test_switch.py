@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 import yaml
 
-from agentmodelctl.models import AgentConfig, ModelAlias, ModelsConfig
+from agentmodelctl.models import AgentConfig
 from agentmodelctl.switch import apply_switch, find_affected_agents, parse_model_string
 
 

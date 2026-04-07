@@ -22,7 +22,11 @@ def version_callback(value: bool) -> None:
 @app.callback()
 def main(
     version: bool = typer.Option(
-        False, "--version", "-v", help="Show version and exit.", callback=version_callback,
+        False,
+        "--version",
+        "-v",
+        help="Show version and exit.",
+        callback=version_callback,
         is_eager=True,
     ),
 ) -> None:
@@ -48,8 +52,8 @@ def list_agents(
     tag: str | None = typer.Option(None, help="Filter by tag"),
 ) -> None:
     """Show fleet overview — agents, models, eval status."""
-    from agentmodelctl.reporter import display_agent_list
     from agentmodelctl.parser import load_project
+    from agentmodelctl.reporter import display_agent_list
 
     project = load_project()
     display_agent_list(project, env=env, owner=owner, tag=tag)
@@ -82,9 +86,7 @@ def switch(
     alias: str = typer.Argument(help="Model alias to switch"),
     new_model: str = typer.Argument(help="New model string"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without applying"),
-    only: str | None = typer.Option(
-        None, help="Comma-separated list of agents to include"
-    ),
+    only: str | None = typer.Option(None, help="Comma-separated list of agents to include"),
 ) -> None:
     """Switch a model alias to a new model."""
     from agentmodelctl.switch_cmd import run_switch

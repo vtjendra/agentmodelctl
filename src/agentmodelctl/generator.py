@@ -18,7 +18,6 @@ from agentmodelctl.models import (
 from agentmodelctl.providers.adapter import call_model
 from agentmodelctl.router import get_api_key, get_litellm_model_string, resolve_alias
 
-
 META_PROMPT = """\
 You are an AI testing expert. Given an agent definition, generate realistic eval test cases.
 
@@ -31,7 +30,8 @@ Tools available: {tools}
 Temperature: {temperature}
 
 Generate {count} diverse test cases as YAML. Each test should exercise different capabilities.
-Include a mix of: happy path, edge cases, tool usage, tone requirements, and multilingual if relevant.
+Include a mix of: happy path, edge cases, tool usage, tone requirements,
+and multilingual if relevant.
 
 Output ONLY valid YAML (no markdown fences, no explanations) in this exact format:
 tests:
@@ -71,9 +71,11 @@ def auto_generate_evals(
     api_key = get_api_key(provider, config)
 
     # Format tools as readable list
-    tools_str = "\n".join(
-        f"  - {t.name}: {t.description}" for t in agent.tools
-    ) if agent.tools else "  (none)"
+    tools_str = (
+        "\n".join(f"  - {t.name}: {t.description}" for t in agent.tools)
+        if agent.tools
+        else "  (none)"
+    )
 
     # Generate test inputs via LLM
     prompt = META_PROMPT.format(

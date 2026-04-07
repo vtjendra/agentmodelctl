@@ -70,8 +70,7 @@ def display_agent_list(
     # Summary line
     alias_count = len(set(a.model for a in filtered.values()))
     console.print(
-        f"\n{len(filtered)} agents | {alias_count} model tiers | "
-        f"{len(provider_set)} providers"
+        f"\n{len(filtered)} agents | {alias_count} model tiers | {len(provider_set)} providers"
     )
 
 
@@ -147,7 +146,6 @@ def display_switch_verdict(
     lines.append(f"  {old_model} → {new_model}")
     lines.append("")
 
-    total_agents = len(agent_results)
     safe_count = 0
     risky_count = 0
     total_savings = 0.0
@@ -156,7 +154,6 @@ def display_switch_verdict(
         old_results: list[EvalResult] = data["old"]
         new_results: list[EvalResult] = data["new"]
 
-        old_passed = sum(1 for r in old_results if r.passed)
         new_passed = sum(1 for r in new_results if r.passed)
         total_tests = len(new_results)
 
@@ -179,7 +176,9 @@ def display_switch_verdict(
             risky_count += 1
             verdict = "[yellow]⚠ RISKY[/yellow]"
 
-        lines.append(f"  [bold]{agent_name}[/bold]         {new_passed}/{total_tests} pass        {verdict}")
+        lines.append(
+            f"  [bold]{agent_name}[/bold]         {new_passed}/{total_tests} pass        {verdict}"
+        )
 
         # Show failures
         for r in new_results:
@@ -257,7 +256,7 @@ def display_compare_table(
         )
 
     console.print(table)
-    console.print(f"\nQPD = Quality Per Dollar (higher = better value)")
+    console.print("\nQPD = Quality Per Dollar (higher = better value)")
     if best_qpd[0]:
         console.print(f"  Best value: [bold]{best_qpd[0]}[/bold]")
     if cheapest[0] and cheapest[0] != best_qpd[0]:
@@ -271,9 +270,7 @@ def display_report(project: Project) -> None:
     evals = project.evals
 
     total_agents = len(agents)
-    total_evals = sum(
-        sum(len(ef.tests) for ef in eval_files) for eval_files in evals.values()
-    )
+    total_evals = sum(sum(len(ef.tests) for ef in eval_files) for eval_files in evals.values())
     agents_with_evals = len(evals)
     agents_without_evals = [n for n in agents if n not in evals]
 
@@ -299,9 +296,7 @@ def display_report(project: Project) -> None:
     # Provider concentration
     if len(providers) == 1 and total_agents > 1:
         prov = list(providers.keys())[0]
-        warnings.append(
-            f"100% provider concentration on {prov.title()} for {total_agents} agents"
-        )
+        warnings.append(f"100% provider concentration on {prov.title()} for {total_agents} agents")
 
     if warnings:
         console.print("\n[yellow]⚠ ATTENTION:[/yellow]")

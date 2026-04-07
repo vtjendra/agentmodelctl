@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
-import os
-
 import pytest
 
-from agentmodelctl.models import AgentConfig, ModelAlias, ModelsConfig, ProjectConfig, ProviderConfig
-from agentmodelctl.router import get_api_key, get_litellm_model_string, resolve_alias, resolve_agent_model
+from agentmodelctl.models import (
+    AgentConfig,
+    ModelAlias,
+    ModelsConfig,
+    ProjectConfig,
+    ProviderConfig,
+)
+from agentmodelctl.router import (
+    get_api_key,
+    get_litellm_model_string,
+    resolve_agent_model,
+    resolve_alias,
+)
 
 
 @pytest.fixture

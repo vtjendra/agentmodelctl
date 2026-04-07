@@ -57,7 +57,6 @@ def run_init(template: str = "custom") -> None:
         if template_dir.exists():
             agent_src = template_dir / "agent.yaml"
             if agent_src.exists():
-                agent_name = template.replace("-", "_")
                 _copy_template(agent_src, agents_dir / f"{template.replace('_', '-')}.yaml")
 
             eval_src = template_dir / "eval.yaml"
@@ -110,10 +109,4 @@ def _ensure_gitignore(project_root: Path) -> None:
     elif gitignore_template.exists():
         shutil.copy2(gitignore_template, gitignore_path)
     else:
-        gitignore_path.write_text(
-            "# agentmodelctl\n"
-            ".env\n"
-            ".env.local\n"
-            ".env.*.local\n"
-            "__pycache__/\n"
-        )
+        gitignore_path.write_text("# agentmodelctl\n.env\n.env.local\n.env.*.local\n__pycache__/\n")

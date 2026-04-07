@@ -11,7 +11,7 @@ from agentmodelctl.models import (
     Project,
     ProjectConfig,
 )
-from agentmodelctl.providers.adapter import call_model, LLMResponse
+from agentmodelctl.providers.adapter import LLMResponse, call_model
 from agentmodelctl.router import get_api_key, get_litellm_model_string, resolve_alias
 from agentmodelctl.scorer import score_eval_test
 
