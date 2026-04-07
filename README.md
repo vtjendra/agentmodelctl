@@ -1,7 +1,4 @@
 # agentmodelctl
-Control all your agents and setup with the most optimal models
-[README.md](https://github.com/user-attachments/files/26488753/README.md)
-# agentmodelctl
 
 **Your agents work today. Will they work after you change the model?**
 
@@ -128,6 +125,70 @@ Runs all evals for affected agents on the new model. Shows quality, speed, and c
 | `agentmodelctl switch <alias> <model> --dry-run` | Preview model migration impact |
 | `agentmodelctl compare <agent> --models A B C` | Side-by-side model comparison |
 | `agentmodelctl report` | Fleet health report |
+| `agentmodelctl ci` | CI-optimized evals with change detection and caching |
+
+## CI/CD Integration (v0.2)
+
+Catch regressions in every PR. The `ci` command detects which agents are affected by your changes, runs only those evals, and outputs structured results for PR comments.
+
+```bash
+# Run in your pipeline — exits 1 if any eval fails
+agentmodelctl ci --ref origin/main
+```
+
+**What it does automatically:**
+- **Change detection** — only re-evaluates agents affected by the PR (touches to `models.yaml`, `agents/`, or `evals/`)
+- **Eval caching** — skips unchanged agent+model+eval combos via SHA-256 fingerprinting
+- **Structured output** — `--format markdown` (default) for PR comments, `--format json` for programmatic use
+
+### GitHub Actions
+
+`agentmodelctl init` generates a ready-to-use workflow at `.github/workflows/agent-eval.yaml`:
+
+```yaml
+# Runs automatically on PRs that touch agent configs
+name: Agent Eval CI
+on:
+  pull_request:
+    paths: ['agents/**', 'evals/**', 'models.yaml', 'agentmodelctl.yaml']
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install agentmodelctl
+      - run: agentmodelctl ci --ref origin/${{ github.base_ref }} --format markdown > eval-results.md
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - uses: marocchino/sticky-pull-request-comment@v2
+        with: { path: eval-results.md }
+```
+
+### PR Comment Output
+
+The CI report posts a summary table directly on your PR:
+
+```
+## agentmodelctl CI Report
+
+| Agent | Result | Pass Rate | Avg Quality | Total Cost | Details |
+|-------|--------|-----------|-------------|------------|---------|
+| customer-support | WARN | 4/5 | 0.92 | $0.0150 | 1 test(s) failed |
+| email-drafter | PASS | 5/5 | 0.97 | $0.0120 | — |
+```
+
+### Output Formats
+
+All eval commands support `--format`:
+
+```bash
+agentmodelctl eval --format json        # JSON for programmatic consumption
+agentmodelctl eval --format markdown    # Markdown tables
+agentmodelctl eval --cache              # Skip unchanged evals
+```
 
 ## No Evals? No Problem.
 
