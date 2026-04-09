@@ -162,6 +162,20 @@ class ProjectConfig(BaseModel):
     providers: dict[str, ProviderConfig] = {}
 
 
+class TrackingEvent(BaseModel):
+    """A single production invocation log entry."""
+
+    timestamp: str  # ISO 8601 UTC
+    agent_name: str
+    model: str  # actual model string (not alias)
+    latency_seconds: float
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cost_usd: float = 0.0
+    error: bool = False
+    metadata: dict[str, Any] = {}
+
+
 class Project(BaseModel):
     """Fully loaded project with all configs."""
 
