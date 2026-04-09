@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from agentmodelctl.models import EvalResult, Project
+from agentmodelctl.models import AgentProductionStats, EvalResult, Project, TrackingEvent
 
 console = Console()
 
@@ -312,3 +312,101 @@ def display_report(project: Project) -> None:
         if alias in models_config.aliases:
             model = models_config.aliases[alias].model
             console.print(f"  {alias} tier: {model} ({len(agent_names)} agents)")
+
+
+def display_fleet_status(stats: list[AgentProductionStats]) -> None:
+    """Display fleet production status as a Rich table."""
+    table = Table(title="Fleet Production Status")
+    table.add_column("Agent", style="bold")
+    table.add_column("Invocations", justify="right")
+    table.add_column("Error Rate", justify="right")
+    table.add_column("p50", justify="right")
+    table.add_column("p95", justify="right")
+    table.add_column("Avg Cost", justify="right")
+    table.add_column("Models")
+    table.add_column("Last Seen")
+
+    total_invocations = 0
+    total_cost = 0.0
+
+    for s in stats:
+        error_style = "red" if s.error_rate > 0.05 else ""
+        error_str = (
+            f"[{error_style}]{s.error_rate:.1%}[/{error_style}]"
+            if error_style
+            else (f"{s.error_rate:.1%}")
+        )
+        table.add_row(
+            s.agent_name,
+            f"{s.total_invocations:,}",
+            error_str,
+            f"{s.latency_p50:.2f}s",
+            f"{s.latency_p95:.2f}s",
+            f"${s.avg_cost_usd:.4f}",
+            ", ".join(s.models_used[:2]),
+            s.last_seen[:10] if s.last_seen else "—",
+        )
+        total_invocations += s.total_invocations
+        total_cost += s.total_cost_usd
+
+    console.print(table)
+    console.print(
+        f"\n  {len(stats)} agents | {total_invocations:,} total calls "
+        f"| ${total_cost:.2f} total cost"
+    )
+
+
+def display_agent_detail(
+    agent_name: str,
+    stats: AgentProductionStats,
+    events: list[TrackingEvent],
+) -> None:
+    """Display per-agent production drill-down."""
+    lines: list[str] = []
+    lines.append(f"  [bold]{agent_name}[/bold]")
+    lines.append("")
+    lines.append(f"  Invocations:  {stats.total_invocations:,}")
+    lines.append(f"  Error rate:   {stats.error_rate:.1%} ({stats.error_count} errors)")
+    lines.append(f"  Period:       {stats.period_days:.1f} days")
+    lines.append("")
+    lines.append("  [bold]Latency[/bold]")
+    lines.append(f"    p50:  {stats.latency_p50:.3f}s")
+    lines.append(f"    p95:  {stats.latency_p95:.3f}s")
+    lines.append(f"    p99:  {stats.latency_p99:.3f}s")
+    lines.append("")
+    lines.append("  [bold]Cost[/bold]")
+    lines.append(f"    Total:   ${stats.total_cost_usd:.4f}")
+    lines.append(f"    Average: ${stats.avg_cost_usd:.4f}/call")
+    lines.append("")
+    lines.append("  [bold]Tokens[/bold]")
+    lines.append(f"    Avg input:  {stats.avg_input_tokens:.0f}")
+    lines.append(f"    Avg output: {stats.avg_output_tokens:.0f}")
+    lines.append("")
+    lines.append(f"  [bold]Models used:[/bold] {', '.join(stats.models_used)}")
+
+    panel = Panel(
+        "\n".join(lines),
+        title=f"Agent Detail: {agent_name}",
+        border_style="bold",
+    )
+    console.print(panel)
+
+    # Recent invocations table
+    recent = sorted(events, key=lambda e: e.timestamp, reverse=True)[:10]
+    if recent:
+        table = Table(title="Recent Invocations")
+        table.add_column("Timestamp")
+        table.add_column("Model")
+        table.add_column("Latency", justify="right")
+        table.add_column("Cost", justify="right")
+        table.add_column("Error")
+        for e in recent:
+            error_str = "[red]yes[/red]" if e.error else ""
+            table.add_row(
+                e.timestamp[:19],
+                e.model,
+                f"{e.latency_seconds:.3f}s",
+                f"${e.cost_usd:.4f}",
+                error_str,
+            )
+        console.print(table)
