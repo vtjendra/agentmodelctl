@@ -139,6 +139,7 @@ def display_switch_verdict(
     old_model: str,
     new_model: str,
     agent_results: dict[str, dict],
+    production_stats: dict[str, AgentProductionStats | None] | None = None,
 ) -> None:
     """Display the switch dry-run verdict as a Rich panel."""
     lines: list[str] = []
@@ -198,6 +199,24 @@ def display_switch_verdict(
 
         quality_pct = ((new_quality - old_quality) / max(old_quality, 0.001)) * 100
         lines.append(f"    📊 quality: {old_quality:.2f} → {new_quality:.2f} ({quality_pct:+.1f}%)")
+
+        # Production volume context (if available)
+        prod = (production_stats or {}).get(agent_name)
+        if prod and prod.total_invocations > 0:
+            daily_rate = prod.total_invocations / max(prod.period_days, 1.0)
+            lines.append(
+                f"    🏭 production: {prod.total_invocations:,} calls ({daily_rate:,.0f}/day)"
+            )
+            if cost_savings != 0:
+                # Per-call savings * daily rate * 30 days
+                old_per_call = sum(r.cost_usd for r in old_results) / max(len(old_results), 1)
+                new_per_call = sum(r.cost_usd for r in new_results) / max(len(new_results), 1)
+                monthly = (old_per_call - new_per_call) * daily_rate * 30
+                if monthly > 0:
+                    lines.append(f"    💰 estimated savings: ${monthly:.2f}/month")
+                elif monthly < 0:
+                    lines.append(f"    💰 estimated extra cost: ${-monthly:.2f}/month")
+
         lines.append("")
         total_savings += cost_savings
 
