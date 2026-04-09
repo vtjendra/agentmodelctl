@@ -176,6 +176,26 @@ class TrackingEvent(BaseModel):
     metadata: dict[str, Any] = {}
 
 
+class AgentProductionStats(BaseModel):
+    """Aggregated production statistics for one agent."""
+
+    agent_name: str
+    total_invocations: int
+    error_count: int
+    error_rate: float  # 0.0 to 1.0
+    latency_p50: float
+    latency_p95: float
+    latency_p99: float
+    avg_cost_usd: float
+    total_cost_usd: float
+    avg_input_tokens: float
+    avg_output_tokens: float
+    models_used: list[str]
+    first_seen: str
+    last_seen: str
+    period_days: float
+
+
 class Project(BaseModel):
     """Fully loaded project with all configs."""
 
