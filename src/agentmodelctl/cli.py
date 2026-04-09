@@ -124,6 +124,28 @@ def report() -> None:
 
 
 @app.command()
+def status(
+    agent_name: str | None = typer.Argument(
+        None, help="Agent to inspect (fleet overview if omitted)"
+    ),
+    detail: bool = typer.Option(False, "--detail", "-d", help="Show per-agent drill-down"),
+    output_format: str = typer.Option(
+        "rich", "--format", "-f", help="Output: rich, json, markdown"
+    ),
+    days: int = typer.Option(7, "--days", "-D", help="Time window in days"),
+) -> None:
+    """Show fleet production status from tracking logs."""
+    from agentmodelctl.status_cmd import run_status
+
+    run_status(
+        agent_name=agent_name,
+        detail=detail,
+        days=days,
+        output_format=output_format,
+    )
+
+
+@app.command()
 def ci(
     ref: str = typer.Option("HEAD", help="Git ref to diff against"),
     output_format: str = typer.Option(

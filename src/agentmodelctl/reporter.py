@@ -6,7 +6,13 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from agentmodelctl.models import EvalResult, Project
+from agentmodelctl.models import (
+    AgentProductionStats,
+    Anomaly,
+    EvalResult,
+    Project,
+    TrackingEvent,
+)
 
 console = Console()
 
@@ -139,6 +145,7 @@ def display_switch_verdict(
     old_model: str,
     new_model: str,
     agent_results: dict[str, dict],
+    production_stats: dict[str, AgentProductionStats | None] | None = None,
 ) -> None:
     """Display the switch dry-run verdict as a Rich panel."""
     lines: list[str] = []
@@ -198,6 +205,24 @@ def display_switch_verdict(
 
         quality_pct = ((new_quality - old_quality) / max(old_quality, 0.001)) * 100
         lines.append(f"    📊 quality: {old_quality:.2f} → {new_quality:.2f} ({quality_pct:+.1f}%)")
+
+        # Production volume context (if available)
+        prod = (production_stats or {}).get(agent_name)
+        if prod and prod.total_invocations > 0:
+            daily_rate = prod.total_invocations / max(prod.period_days, 1.0)
+            lines.append(
+                f"    🏭 production: {prod.total_invocations:,} calls ({daily_rate:,.0f}/day)"
+            )
+            if cost_savings != 0:
+                # Per-call savings * daily rate * 30 days
+                old_per_call = sum(r.cost_usd for r in old_results) / max(len(old_results), 1)
+                new_per_call = sum(r.cost_usd for r in new_results) / max(len(new_results), 1)
+                monthly = (old_per_call - new_per_call) * daily_rate * 30
+                if monthly > 0:
+                    lines.append(f"    💰 estimated savings: ${monthly:.2f}/month")
+                elif monthly < 0:
+                    lines.append(f"    💰 estimated extra cost: ${-monthly:.2f}/month")
+
         lines.append("")
         total_savings += cost_savings
 
@@ -312,3 +337,139 @@ def display_report(project: Project) -> None:
         if alias in models_config.aliases:
             model = models_config.aliases[alias].model
             console.print(f"  {alias} tier: {model} ({len(agent_names)} agents)")
+
+
+def display_fleet_status(
+    stats: list[AgentProductionStats],
+    anomalies: list[Anomaly] | None = None,
+) -> None:
+    """Display fleet production status as a Rich table."""
+    # Build anomaly lookup by agent name
+    agent_anomalies: dict[str, list[Anomaly]] = {}
+    for a in anomalies or []:
+        agent_anomalies.setdefault(a.agent_name, []).append(a)
+
+    table = Table(title="Fleet Production Status")
+    table.add_column("Agent", style="bold")
+    table.add_column("Invocations", justify="right")
+    table.add_column("Error Rate", justify="right")
+    table.add_column("p50", justify="right")
+    table.add_column("p95", justify="right")
+    table.add_column("Avg Cost", justify="right")
+    table.add_column("Models")
+    table.add_column("Status")
+
+    total_invocations = 0
+    total_cost = 0.0
+
+    for s in stats:
+        error_style = "red" if s.error_rate > 0.05 else ""
+        error_str = (
+            f"[{error_style}]{s.error_rate:.1%}[/{error_style}]"
+            if error_style
+            else (f"{s.error_rate:.1%}")
+        )
+
+        # Status badge from anomalies
+        aa = agent_anomalies.get(s.agent_name, [])
+        if any(a.severity == "critical" for a in aa):
+            status_str = "[red]!! CRITICAL[/red]"
+        elif aa:
+            status_str = "[yellow]! WARNING[/yellow]"
+        else:
+            status_str = "[green]OK[/green]"
+
+        table.add_row(
+            s.agent_name,
+            f"{s.total_invocations:,}",
+            error_str,
+            f"{s.latency_p50:.2f}s",
+            f"{s.latency_p95:.2f}s",
+            f"${s.avg_cost_usd:.4f}",
+            ", ".join(s.models_used[:2]),
+            status_str,
+        )
+        total_invocations += s.total_invocations
+        total_cost += s.total_cost_usd
+
+    console.print(table)
+    console.print(
+        f"\n  {len(stats)} agents | {total_invocations:,} total calls "
+        f"| ${total_cost:.2f} total cost"
+    )
+
+
+def display_agent_detail(
+    agent_name: str,
+    stats: AgentProductionStats,
+    events: list[TrackingEvent],
+) -> None:
+    """Display per-agent production drill-down."""
+    lines: list[str] = []
+    lines.append(f"  [bold]{agent_name}[/bold]")
+    lines.append("")
+    lines.append(f"  Invocations:  {stats.total_invocations:,}")
+    lines.append(f"  Error rate:   {stats.error_rate:.1%} ({stats.error_count} errors)")
+    lines.append(f"  Period:       {stats.period_days:.1f} days")
+    lines.append("")
+    lines.append("  [bold]Latency[/bold]")
+    lines.append(f"    p50:  {stats.latency_p50:.3f}s")
+    lines.append(f"    p95:  {stats.latency_p95:.3f}s")
+    lines.append(f"    p99:  {stats.latency_p99:.3f}s")
+    lines.append("")
+    lines.append("  [bold]Cost[/bold]")
+    lines.append(f"    Total:   ${stats.total_cost_usd:.4f}")
+    lines.append(f"    Average: ${stats.avg_cost_usd:.4f}/call")
+    lines.append("")
+    lines.append("  [bold]Tokens[/bold]")
+    lines.append(f"    Avg input:  {stats.avg_input_tokens:.0f}")
+    lines.append(f"    Avg output: {stats.avg_output_tokens:.0f}")
+    lines.append("")
+    lines.append(f"  [bold]Models used:[/bold] {', '.join(stats.models_used)}")
+
+    panel = Panel(
+        "\n".join(lines),
+        title=f"Agent Detail: {agent_name}",
+        border_style="bold",
+    )
+    console.print(panel)
+
+    # Recent invocations table
+    recent = sorted(events, key=lambda e: e.timestamp, reverse=True)[:10]
+    if recent:
+        table = Table(title="Recent Invocations")
+        table.add_column("Timestamp")
+        table.add_column("Model")
+        table.add_column("Latency", justify="right")
+        table.add_column("Cost", justify="right")
+        table.add_column("Error")
+        for e in recent:
+            error_str = "[red]yes[/red]" if e.error else ""
+            table.add_row(
+                e.timestamp[:19],
+                e.model,
+                f"{e.latency_seconds:.3f}s",
+                f"${e.cost_usd:.4f}",
+                error_str,
+            )
+        console.print(table)
+
+
+def display_anomalies(anomalies: list[Anomaly]) -> None:
+    """Display detected anomalies as a Rich panel."""
+    if not anomalies:
+        return
+
+    lines: list[str] = []
+    for a in anomalies:
+        if a.severity == "critical":
+            lines.append(f"  [red]!! {a.message}[/red]")
+        else:
+            lines.append(f"  [yellow]! {a.message}[/yellow]")
+
+    panel = Panel(
+        "\n".join(lines),
+        title="ANOMALIES DETECTED",
+        border_style="yellow",
+    )
+    console.print(panel)

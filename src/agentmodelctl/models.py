@@ -162,6 +162,51 @@ class ProjectConfig(BaseModel):
     providers: dict[str, ProviderConfig] = {}
 
 
+class TrackingEvent(BaseModel):
+    """A single production invocation log entry."""
+
+    timestamp: str  # ISO 8601 UTC
+    agent_name: str
+    model: str  # actual model string (not alias)
+    latency_seconds: float
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cost_usd: float = 0.0
+    error: bool = False
+    metadata: dict[str, Any] = {}
+
+
+class AgentProductionStats(BaseModel):
+    """Aggregated production statistics for one agent."""
+
+    agent_name: str
+    total_invocations: int
+    error_count: int
+    error_rate: float  # 0.0 to 1.0
+    latency_p50: float
+    latency_p95: float
+    latency_p99: float
+    avg_cost_usd: float
+    total_cost_usd: float
+    avg_input_tokens: float
+    avg_output_tokens: float
+    models_used: list[str]
+    first_seen: str
+    last_seen: str
+    period_days: float
+
+
+class Anomaly(BaseModel):
+    """A detected anomaly for an agent."""
+
+    agent_name: str
+    severity: str  # "warning" or "critical"
+    category: str  # "error_rate", "latency", "cost"
+    message: str
+    current_value: float
+    threshold: float | None = None
+
+
 class Project(BaseModel):
     """Fully loaded project with all configs."""
 

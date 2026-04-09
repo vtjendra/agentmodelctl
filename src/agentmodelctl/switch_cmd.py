@@ -51,7 +51,20 @@ def run_switch(
         only=only_list,
     )
 
-    display_switch_verdict(alias, old_model, new_model, agent_results)
+    # Enrich with production data if available
+    from agentmodelctl.logs import compute_stats, load_events
+
+    production_stats = {}
+    for agent_name_key in agent_results:
+        events = load_events(agent_name_key, project.project_root)
+        if events:
+            production_stats[agent_name_key] = compute_stats(agent_name_key, events)
+        else:
+            production_stats[agent_name_key] = None
+
+    display_switch_verdict(
+        alias, old_model, new_model, agent_results, production_stats=production_stats
+    )
 
     if dry_run:
         return
