@@ -56,7 +56,8 @@ def run_status(
 
 def _show_fleet_overview(project_root, since: str, fmt: OutputFormat) -> None:
     """Display fleet overview from production logs."""
-    from agentmodelctl.reporter import display_fleet_status
+    from agentmodelctl.anomaly import detect_anomalies
+    from agentmodelctl.reporter import display_anomalies, display_fleet_status
 
     stats = compute_fleet_stats(project_root, since=since)
 
@@ -65,11 +66,15 @@ def _show_fleet_overview(project_root, since: str, fmt: OutputFormat) -> None:
         console.print("Start logging with: [bold]from agentmodelctl import track[/bold]")
         return
 
-    output = format_fleet_status(stats, fmt)
+    anomalies = detect_anomalies(stats)
+
+    output = format_fleet_status(stats, fmt, anomalies=anomalies)
     if output is not None:
         console.print(output)
     else:
-        display_fleet_status(stats)
+        display_fleet_status(stats, anomalies=anomalies)
+        if anomalies:
+            display_anomalies(anomalies)
 
 
 def _show_agent_detail(agent_name: str, project_root, since: str, fmt: OutputFormat) -> None:

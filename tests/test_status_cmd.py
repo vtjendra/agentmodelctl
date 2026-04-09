@@ -116,8 +116,9 @@ class TestStatusCLI:
         result = runner.invoke(app, ["status", "-f", "json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert isinstance(data, list)
-        assert data[0]["agent_name"] == "support"
+        assert isinstance(data, dict)
+        assert data["agents"][0]["agent_name"] == "support"
+        assert "anomalies" in data
 
 
 class TestFormatFleetStatus:
@@ -126,7 +127,8 @@ class TestFormatFleetStatus:
         result = format_fleet_status(stats, OutputFormat.json)
         assert result is not None
         data = json.loads(result)
-        assert data[0]["agent_name"] == "support"
+        assert data["agents"][0]["agent_name"] == "support"
+        assert data["anomalies"] == []
 
     def test_markdown(self) -> None:
         stats = [_sample_stats()]

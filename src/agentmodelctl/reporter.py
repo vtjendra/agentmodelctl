@@ -6,7 +6,13 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from agentmodelctl.models import AgentProductionStats, EvalResult, Project, TrackingEvent
+from agentmodelctl.models import (
+    AgentProductionStats,
+    Anomaly,
+    EvalResult,
+    Project,
+    TrackingEvent,
+)
 
 console = Console()
 
@@ -333,8 +339,16 @@ def display_report(project: Project) -> None:
             console.print(f"  {alias} tier: {model} ({len(agent_names)} agents)")
 
 
-def display_fleet_status(stats: list[AgentProductionStats]) -> None:
+def display_fleet_status(
+    stats: list[AgentProductionStats],
+    anomalies: list[Anomaly] | None = None,
+) -> None:
     """Display fleet production status as a Rich table."""
+    # Build anomaly lookup by agent name
+    agent_anomalies: dict[str, list[Anomaly]] = {}
+    for a in anomalies or []:
+        agent_anomalies.setdefault(a.agent_name, []).append(a)
+
     table = Table(title="Fleet Production Status")
     table.add_column("Agent", style="bold")
     table.add_column("Invocations", justify="right")
@@ -343,7 +357,7 @@ def display_fleet_status(stats: list[AgentProductionStats]) -> None:
     table.add_column("p95", justify="right")
     table.add_column("Avg Cost", justify="right")
     table.add_column("Models")
-    table.add_column("Last Seen")
+    table.add_column("Status")
 
     total_invocations = 0
     total_cost = 0.0
@@ -355,6 +369,16 @@ def display_fleet_status(stats: list[AgentProductionStats]) -> None:
             if error_style
             else (f"{s.error_rate:.1%}")
         )
+
+        # Status badge from anomalies
+        aa = agent_anomalies.get(s.agent_name, [])
+        if any(a.severity == "critical" for a in aa):
+            status_str = "[red]!! CRITICAL[/red]"
+        elif aa:
+            status_str = "[yellow]! WARNING[/yellow]"
+        else:
+            status_str = "[green]OK[/green]"
+
         table.add_row(
             s.agent_name,
             f"{s.total_invocations:,}",
@@ -363,7 +387,7 @@ def display_fleet_status(stats: list[AgentProductionStats]) -> None:
             f"{s.latency_p95:.2f}s",
             f"${s.avg_cost_usd:.4f}",
             ", ".join(s.models_used[:2]),
-            s.last_seen[:10] if s.last_seen else "—",
+            status_str,
         )
         total_invocations += s.total_invocations
         total_cost += s.total_cost_usd
@@ -429,3 +453,23 @@ def display_agent_detail(
                 error_str,
             )
         console.print(table)
+
+
+def display_anomalies(anomalies: list[Anomaly]) -> None:
+    """Display detected anomalies as a Rich panel."""
+    if not anomalies:
+        return
+
+    lines: list[str] = []
+    for a in anomalies:
+        if a.severity == "critical":
+            lines.append(f"  [red]!! {a.message}[/red]")
+        else:
+            lines.append(f"  [yellow]! {a.message}[/yellow]")
+
+    panel = Panel(
+        "\n".join(lines),
+        title="ANOMALIES DETECTED",
+        border_style="yellow",
+    )
+    console.print(panel)

@@ -7,6 +7,7 @@ import json
 from agentmodelctl.models import (
     AgentEvalSummary,
     AgentProductionStats,
+    Anomaly,
     EvalResult,
     OutputFormat,
 )
@@ -146,17 +147,19 @@ def _eval_summary_to_markdown(summaries: list[AgentEvalSummary]) -> str:
 def format_fleet_status(
     stats: list[AgentProductionStats],
     fmt: OutputFormat,
+    anomalies: list[Anomaly] | None = None,
 ) -> str | None:
     """Format fleet status. Returns None for rich, str for json/markdown."""
     if fmt == OutputFormat.rich:
         return None
     if fmt == OutputFormat.json:
-        return json.dumps(
-            [s.model_dump() for s in stats],
-            indent=2,
-        )
+        data = {
+            "agents": [s.model_dump() for s in stats],
+            "anomalies": [a.model_dump() for a in (anomalies or [])],
+        }
+        return json.dumps(data, indent=2)
     if fmt == OutputFormat.markdown:
-        return _fleet_status_to_markdown(stats)
+        return _fleet_status_to_markdown(stats, anomalies=anomalies)
     return None
 
 
@@ -175,7 +178,10 @@ def format_agent_detail(
     return None
 
 
-def _fleet_status_to_markdown(stats: list[AgentProductionStats]) -> str:
+def _fleet_status_to_markdown(
+    stats: list[AgentProductionStats],
+    anomalies: list[Anomaly] | None = None,
+) -> str:
     """Render fleet status as a markdown table."""
     lines: list[str] = []
     lines.append("## Fleet Production Status")
@@ -202,6 +208,14 @@ def _fleet_status_to_markdown(stats: list[AgentProductionStats]) -> str:
         f"**{len(stats)} agents** | {total_invocations:,} total calls "
         f"| ${total_cost:.2f} total cost"
     )
+
+    if anomalies:
+        lines.append("")
+        lines.append("### Anomalies")
+        for a in anomalies:
+            prefix = "!!" if a.severity == "critical" else "!"
+            lines.append(f"- {prefix} {a.message}")
+
     return "\n".join(lines)
 
 

@@ -196,6 +196,17 @@ class AgentProductionStats(BaseModel):
     period_days: float
 
 
+class Anomaly(BaseModel):
+    """A detected anomaly for an agent."""
+
+    agent_name: str
+    severity: str  # "warning" or "critical"
+    category: str  # "error_rate", "latency", "cost"
+    message: str
+    current_value: float
+    threshold: float | None = None
+
+
 class Project(BaseModel):
     """Fully loaded project with all configs."""
 
