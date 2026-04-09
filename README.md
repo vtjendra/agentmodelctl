@@ -126,6 +126,7 @@ Runs all evals for affected agents on the new model. Shows quality, speed, and c
 | `agentmodelctl compare <agent> --models A B C` | Side-by-side model comparison |
 | `agentmodelctl report` | Fleet health report |
 | `agentmodelctl ci` | CI-optimized evals with change detection and caching |
+| `agentmodelctl status` | Fleet production status from tracking logs |
 
 ## CI/CD Integration (v0.2)
 
@@ -188,6 +189,68 @@ All eval commands support `--format`:
 agentmodelctl eval --format json        # JSON for programmatic consumption
 agentmodelctl eval --format markdown    # Markdown tables
 agentmodelctl eval --cache              # Skip unchanged evals
+```
+
+## Production Awareness (v0.3)
+
+Know what your agents are doing in production — invocation volume, latency, error rates, cost — and use real data to make smarter model-switching decisions.
+
+### Track Production Invocations
+
+Add one line to your agent code:
+
+```python
+from agentmodelctl import track
+
+track.log(
+    agent_name="customer-support",
+    model="claude-sonnet-4-6",
+    latency_seconds=1.2,
+    input_tokens=100,
+    output_tokens=50,
+    cost_usd=0.003,
+)
+```
+
+Logs are stored as JSONL in `.agentmodelctl/logs/` — no server, no external dependencies.
+
+### Fleet Status
+
+```bash
+agentmodelctl status
+```
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ Agent        │ Invocations │ Error Rate │  p50  │  p95  │ Avg Cost   │
+├──────────────┼─────────────┼────────────┼───────┼───────┼────────────┤
+│ support      │      12,340 │      1.2%  │ 0.45s │ 1.20s │ $0.0030    │
+│ email-drafter│       8,200 │      0.3%  │ 0.30s │ 0.80s │ $0.0025    │
+│ sales        │       3,100 │      8.5%  │ 0.60s │ 2.10s │ $0.0041    │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌─────────── ANOMALIES DETECTED ────────────┐
+│  ! sales: error rate 8.5% exceeds 5%      │
+└────────────────────────────────────────────┘
+```
+
+### Smarter Model Switching
+
+`switch --dry-run` now shows production volume and estimated real savings:
+
+```
+  customer-support    5/5 pass    ✅ SAFE
+    💰 saves $1.20 / 1K calls
+    🏭 production: 12,340 calls (1,763/day)
+    💰 estimated savings: $74.72/month
+```
+
+### Status Options
+
+```bash
+agentmodelctl status                    # Fleet overview (last 7 days)
+agentmodelctl status support            # Per-agent drill-down
+agentmodelctl status --days 30          # Custom time window
+agentmodelctl status --format json      # JSON output for dashboards
 ```
 
 ## No Evals? No Problem.
